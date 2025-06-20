@@ -3,10 +3,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 async function register(req, res) {
-  const { name, email, password, roll, role } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password || !role) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({ message: "Name, Email, Password and Role are required" });
   }
 
   const emailRegex = /^[a-zA-Z0-9._%+-]+@kiit\.ac\.in$/;
@@ -30,7 +30,6 @@ async function register(req, res) {
       email: normalizedEmail,
       password: hashedPassword,
       role,
-      roll,
     });
 
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {

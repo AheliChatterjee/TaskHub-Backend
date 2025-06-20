@@ -7,7 +7,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const dbUrl = process.env.MONGODB_URL;
-
 const app = express();
 
 let isConnected = false;
@@ -36,9 +35,10 @@ app.use(async (req, res, next) => {
   next();
 });
 
-//Add routes here
 const testRoutes = require("./routes/test");
+const authRoutes = require("./routes/authRoutes");
 app.use("/api/test", testRoutes);
+app.use("/api/auth", authRoutes);
 
 app.all("*", (req, res, next) => {
   next(res.status(404).json({ message: "Route not found" }));
@@ -46,9 +46,9 @@ app.all("*", (req, res, next) => {
 
 module.exports = app;
 
-// if (require.main === module) {
-//     const PORT = 5000;
-//     app.listen(PORT, () => {
-//       console.log(`Server is running on http://localhost:${PORT}`);
-//     });
-// }
+if (require.main === module) {
+    const PORT = 5000;
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}

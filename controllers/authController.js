@@ -6,15 +6,17 @@ async function register(req, res) {
   const { name, email, password, role } = req.body;
 
   if (!name || !email || !password || !role) {
-    return res.status(400).json({ message: "Name, Email, Password and Role are required" });
+    return res
+      .status(400)
+      .json({ message: "Name, Email, Password and Role are required" });
   }
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@kiit\.ac\.in$/;
+  const emailRegex = /^[0-9]{7,8}@kiit\.ac\.in$/;
   const normalizedEmail = email.trim().toLowerCase();
 
   if (!emailRegex.test(normalizedEmail)) {
     return res.status(400).json({
-      message: "Only KIIT email addresses (@kiit.ac.in) are allowed",
+      message: "Only valid KIIT email addresses (@kiit.ac.in) are allowed",
     });
   }
 
@@ -32,11 +34,18 @@ async function register(req, res) {
       role,
     });
 
+    newUser.isVerified = true;
+    await newUser.save();
+
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    res.status(201).json({ token, user: { id: newUser._id, name, role } });
+    res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: { id: newUser._id, name, role },
+    });
   } catch (error) {
     console.error("Register error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -50,7 +59,7 @@ async function login(req, res) {
     return res.status(400).json({ message: "Email and password are required" });
   }
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@kiit\.ac\.in$/;
+  const emailRegex = /^[0-9]{7,8}@kiit\.ac\.in$/;
   const normalizedEmail = email.trim().toLowerCase();
 
   if (!emailRegex.test(normalizedEmail)) {
@@ -63,18 +72,21 @@ async function login(req, res) {
     console.log("Looking for user with email:", normalizedEmail);
     const user = await User.findOne({ email: normalizedEmail });
     console.log("Found user:", user);
-    if (!user){
+    if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch){
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
+
+    newUser.isVerified = true;
+    await newUser.save();
 
     res.status(200).json({
       token,

@@ -2,6 +2,7 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+//Manual sign-up
 async function register(req, res) {
   const { name, email, password, role } = req.body;
 
@@ -16,7 +17,7 @@ async function register(req, res) {
 
   if (!emailRegex.test(normalizedEmail)) {
     return res.status(400).json({
-      message: "Only valid KIIT email addresses (@kiit.ac.in) are allowed",
+      message: "Please enter a valid KIIT email addresses",
     });
   }
 
@@ -52,6 +53,7 @@ async function register(req, res) {
   }
 }
 
+//Manual login
 async function login(req, res) {
   const { email, password } = req.body;
 
@@ -85,8 +87,8 @@ async function login(req, res) {
       expiresIn: "7d",
     });
 
-    newUser.isVerified = true;
-    await newUser.save();
+    user.isVerified = true;
+    await user.save();
 
     res.status(200).json({
       token,

@@ -28,7 +28,12 @@ const connectToDB = async () => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",                    
+    "https://task-hub-frontend-three.vercel.app" 
+  ]
+}));
 
 app.use(async (req, res, next) => {
   await connectToDB();

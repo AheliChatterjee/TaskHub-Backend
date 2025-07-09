@@ -89,6 +89,7 @@ async function login(req, res) {
     await user.save();
 
     res.status(200).json({
+      message: "Login Successful",
       token,
       user: { id: user._id, name: user.name, role: user.role },
     });

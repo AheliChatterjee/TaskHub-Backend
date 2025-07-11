@@ -31,6 +31,7 @@ const UserSchema = new mongoose.Schema(
     //status fields
     isVerified: { type: Boolean, default: false },
     isBanned: { type: Boolean, default: false },
+    verificationExpires: { type: Date, required: false },
   },
   { timestamps: true }
 );

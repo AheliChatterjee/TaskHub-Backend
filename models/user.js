@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema(
   {
     // Primary details (To be filled in initial signup)
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true },    
+    email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: {
       type: String,
@@ -27,11 +27,13 @@ const UserSchema = new mongoose.Schema(
     github: { type: String, required: false },
     instagram: { type: String, required: false },
     portfolio: { type: String, required: false },
-    
+
     //status fields
     isVerified: { type: Boolean, default: false },
     isBanned: { type: Boolean, default: false },
     verificationExpires: { type: Date, required: false },
+    resetPasswordToken: { type: String, required: false },
+    resetPasswordExpires: { type: Date, required: false },
   },
   { timestamps: true }
 );

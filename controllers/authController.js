@@ -2,6 +2,8 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendVerificationEmail = require("../utils/sendVerificationEmail");
+const crypto = require("crypto");
+const sendPasswordResetEmail = require("../utils/sendPasswordResetEmail");
 
 const emailRegex = /^[0-9]{7,8}@kiit\.ac\.in$/;
 
@@ -164,9 +166,72 @@ async function resendVerificationEmail(req, res) {
   }
 }
 
+async function requestPasswordReset(req, res) {
+  const { email } = req.body;
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!emailRegex.test(normalizedEmail)) {
+    return res.status(400).json({ message: "Invalid KIIT email format" });
+  }
+
+  try {
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "No user found with that email" });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    await sendPasswordResetEmail(user.email, token);
+
+    res.status(200).json({ message: "Password reset email sent" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
+async function resetPassword(req, res) {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ message: "Token and new password are required" });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
 module.exports = {
   register,
   login,
   verifyEmail,
   resendVerificationEmail,
+  requestPasswordReset,
+  resetPassword,
 };

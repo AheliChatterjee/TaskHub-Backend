@@ -5,9 +5,10 @@ async function sendVerificationEmail(toEmail, token) {
   const verificationUrl = `${process.env.VERIFICATION_URL}?token=${token}`;
 
   try {
+    toEmail="taskhub6@gmail.com"//to be commented out later
     const response = await resend.emails.send({
       from: "onboarding@resend.dev", //replace with your domain verified URL
-      to: "taskhub6@gmail.com", //replace with toEmail during production
+      to: toEmail, 
       subject: "Verify your email for TaskHub",
       html: `
         <p>Welcome to TaskHub!</p>

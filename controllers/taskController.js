@@ -1,10 +1,5 @@
 const Task = require("../models/task");
 
-/**
- * @desc Upload a new task
- * @route POST /api/task/upload
- * @access Private
- */
 async function uploadTask(req, res) {
   try {
     const { title, description, category, deadline, budget } = req.body;
@@ -52,8 +47,8 @@ async function uploadTask(req, res) {
         message: "Validation failed",
         errors: errors,
       });
-    } 
-    
+    }
+
     return res.status(500).json({
       message: "Server error while uploading task",
       error: error.message,
@@ -61,64 +56,72 @@ async function uploadTask(req, res) {
   }
 }
 
-/**
- * @desc View tasks with pagination
- * @route GET /api/task/
- * @access Private
- * @queryParam page {Number} - The page number to retrieve (default: 1)
- * @queryParam limit {Number} - The number of tasks per page (default: 10)
- * @queryParam status {String} - Optional: Filter tasks by status (e.g., 'open', 'in progress', 'completed')
- * @queryParam category {String} - Optional: Filter tasks by category
- */
+// View all tasks with pagination, search, and sorting
 async function viewTasks(req, res) {
   try {
-    const page = parseInt(req.query.page) || 1; 
-    const limit = parseInt(req.query.limit) || 10; 
-    const skip = (page - 1) * limit; 
+    const { page = 1, limit = 10, status, category, search, sortBy, order } = req.query;
 
-    const filter = {};
-    if (req.query.status) {
-      filter.status = req.query.status;
-    }
-    if (req.query.category) {
-      filter.category = req.query.category;
+    const query = {};
+
+    if (status) query.status = status;
+    if (category) query.category = category;
+
+    if (search) {
+      const keyword = search.trim();
+      query.$or = [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } }
+      ];
     }
 
-    const tasks = await Task.find(filter)
-      .sort({ createdAt: -1 }) 
+    // Sorting
+    const validSortFields = ["budget", "deadline", "createdAt"];
+    const sortOrder = order === "desc" ? -1 : 1;
+
+    let sortOption = { createdAt: -1 }; // Default: newest first
+    if (sortBy && validSortFields.includes(sortBy)) {
+      sortOption = { [sortBy]: sortOrder };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const tasks = await Task.find(query)
+      .populate("uploadedBy", "name email")
+      .sort(sortOption)
       .skip(skip)
-      .limit(limit)
-      .populate("uploadedBy", "username email");
+      .limit(parseInt(limit));
 
-    // Get total count of tasks matching the filter for pagination metadata
-    const totalTasks = await Task.countDocuments(filter);
-    const totalPages = Math.ceil(totalTasks / limit);
+    const total = await Task.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
 
-    // Respond with the paginated tasks and metadata
-    res.status(200).json({
-      status: 200,
-      message: "Tasks retrieved successfully",
+    res.status(200).json({  
+      totalTasks: total,    
+      totalPages,
+      currentPage: parseInt(page),
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
       tasks,
-      pagination: {
-        totalTasks,
-        totalPages,
-        currentPage: page,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-        nextPage: page < totalPages ? page + 1 : null,
-        prevPage: page > 1 ? page - 1 : null,
-      },
     });
   } catch (error) {
-    console.error("Error viewing tasks:", error);
-    return res.status(500).json({
-      message: "Server error while retrieving tasks",
-      error: error.message,
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+async function getMyTasks(req, res) {
+  try {
+    const userId = req.user.id;
+    const tasks = await Task.find({ uploadedBy: userId }).sort({
+      createdAt: -1,
     });
+    res.status(200).json({ tasks });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
 module.exports = {
   uploadTask,
-  viewTasks, 
-}
+  viewTasks,
+  getMyTasks,
+};

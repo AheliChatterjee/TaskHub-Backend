@@ -6,7 +6,9 @@ const { validateTaskInput } = require('../middleware/taskValidation'); // Your v
 
 router.post("/upload", authMiddleware, validateTaskInput, taskController.uploadTask);
 
-router.get("/", authMiddleware, taskController.viewTasks);
+router.get("/", taskController.viewTasks);
+
+router.get("/my-tasks", authMiddleware, taskController.getMyTasks);
 
 // router.delete("/:id", authMiddleware, taskController.deleteTask);
 

@@ -10,6 +10,8 @@ router.get("/", taskController.viewTasks);
 
 router.get("/my-tasks", authMiddleware, taskController.getMyTasks);
 
+router.patch("/:id/status", authMiddleware, taskController.updateTaskStatus);
+
 // router.delete("/:id", authMiddleware, taskController.deleteTask);
 
 // router.put("/edit/:id", authMiddleware, taskController.editTask);

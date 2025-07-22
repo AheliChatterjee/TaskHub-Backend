@@ -12,9 +12,9 @@ router.get("/my-tasks", authMiddleware, taskController.getMyTasks);
 
 router.patch("/:id/status", authMiddleware, taskController.updateTaskStatus);
 
-// router.delete("/:id", authMiddleware, taskController.deleteTask);
+router.delete("/:id", authMiddleware, taskController.deleteTask);
 
-// router.put("/edit/:id", authMiddleware, taskController.editTask);
+router.put("/edit/:id", authMiddleware, taskController.editTask);
 
 module.exports = router;
 

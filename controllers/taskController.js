@@ -58,7 +58,15 @@ async function uploadTask(req, res) {
 
 async function viewTasks(req, res) {
   try {
-    const { page = 1, limit = 10, status, category, search, sortBy, order } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      category,
+      search,
+      sortBy,
+      order,
+    } = req.query;
 
     const query = {};
 
@@ -69,7 +77,7 @@ async function viewTasks(req, res) {
       const keyword = search.trim();
       query.$or = [
         { title: { $regex: keyword, $options: "i" } },
-        { description: { $regex: keyword, $options: "i" } }
+        { description: { $regex: keyword, $options: "i" } },
       ];
     }
 
@@ -93,8 +101,8 @@ async function viewTasks(req, res) {
     const total = await Task.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
-    res.status(200).json({  
-      totalTasks: total,    
+    res.status(200).json({
+      totalTasks: total,
       totalPages,
       currentPage: parseInt(page),
       hasNextPage: page < totalPages,
@@ -137,23 +145,93 @@ async function updateTaskStatus(req, res) {
     }
 
     if (task.uploadedBy.toString() !== userId) {
-      return res.status(403).json({ message: "You are not authorized to update this task." });
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to update this task." });
     }
 
     task.status = status;
     await task.save();
 
-    res.status(200).json({ message: "Task status updated successfully.", task });
+    res
+      .status(200)
+      .json({ message: "Task status updated successfully.", task });
   } catch (error) {
     console.error("Error updating task status:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
+async function deleteTask(req, res) {
+  try {
+    const taskId = req.params.id;
+    const userId = req.user.id;
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    if (task.uploadedBy.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to delete this task." });
+    }
+
+    await task.deleteOne();
+
+    res.status(200).json({ message: "Task deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+async function editTask(req, res) {
+  try {
+    const taskId = req.params.id;
+    const userId = req.user.id;
+    const { title, description, category, deadline, budget } = req.body;
+
+    if (!title || !description || !category || !deadline || budget === undefined) {
+      return res.status(400).json({ message: "All fields (title, description, category, deadline, budget) are required." });
+    }
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    if (task.uploadedBy.toString() !== userId) {
+      return res.status(403).json({ message: "You are not authorized to edit this task." });
+    }
+
+    if (task.status !== "open") {
+      return res.status(400).json({ message: "Only tasks with 'open' status can be edited." });
+    }
+
+    // Apply changes
+    task.title = title.trim();
+    task.description = description.trim();
+    task.category = category;
+    task.deadline = deadline;
+    task.budget = budget;
+
+    await task.save();
+
+    res.status(200).json({ message: "Task updated successfully.", task });
+  } catch (error) {
+    console.error("Error editing task:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
 
 module.exports = {
   uploadTask,
   viewTasks,
   getMyTasks,
   updateTaskStatus,
+  deleteTask,
+  editTask,
 };

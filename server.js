@@ -42,8 +42,10 @@ app.use(async (req, res, next) => {
 
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const applicationRoutes = require("./routes/applicationRoutes");
 app.use("/api/auth", authRoutes);
 app.use("/api/task", taskRoutes);
+app.use("/api/application", applicationRoutes);
 
 app.all("*", (req, res, next) => {
   next(res.status(404).json({ message: "Route not found" }));

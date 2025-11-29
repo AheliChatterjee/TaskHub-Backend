@@ -1,31 +1,38 @@
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
-
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 
-const dbUrl = process.env.MONGODB_URL;
 const app = express();
+
+// 🔗 MongoDB connection URL
+const dbUrl = process.env.MONGODB_URL;
 
 let isConnected = false;
 
-const connectToDB = async () => {
-  if (isConnected) {
-    console.log("Using existing database connection");
-    return;
-  }
-  try {
-    await mongoose.connect(dbUrl);
-    isConnected = true;
-    console.log("MongoDB Connected");
-  } catch (err) {
-    console.error("MongoDB Connection Error:", err);
-    isConnected = false;
-  }
-};
+// 🔌 Connect to MongoDB once and reuse the connection
+async function connectToDB() {
+  if (isConnected) return;
 
+  try {
+    await mongoose.connect(dbUrl, {
+      // these options are optional in newer Mongoose versions,
+      // you can remove them if you get warnings
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    isConnected = true;
+    console.log("✅ Connected to MongoDB");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    throw error;
+  }
+}
+
+/* ----------------------  CORS CONFIG  ---------------------- */
+
+// Frontend origins that are allowed to call this backend
 const allowedOrigins = [
   "http://localhost:5173",
   "https://task-hub-frontend-three.vercel.app",
@@ -33,6 +40,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -43,39 +51,62 @@ const corsOptions = {
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // set to true only if you plan to use cookies / auth with credentials
+  credentials: true, // set true only if you use cookies / auth that needs credentials
 };
 
-
+// ✅ CORS MUST COME BEFORE body parsers & routes
 app.use(cors(corsOptions));
+// Handle all preflight OPTIONS requests
 app.options("*", cors(corsOptions));
+
+/* --------------------  BODY PARSERS  -------------------- */
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+/* --------------------  DB MIDDLEWARE  -------------------- */
+
+// Ensure DB connection exists for each request
 app.use(async (req, res, next) => {
-  await connectToDB();
-  next();
+  try {
+    await connectToDB();
+    next();
+  } catch (error) {
+    console.error("DB connection failed for request:", error);
+    return res.status(500).json({ message: "Database connection error" });
+  }
 });
 
-const path = require("path");
+/* --------------------  STATIC FILES  -------------------- */
+
+// Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+/* ------------------------  ROUTES  ------------------------ */
 
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+
 app.use("/api/auth", authRoutes);
+// NOTE: prefix is /api/task (singular)
 app.use("/api/task", taskRoutes);
 app.use("/api/application", applicationRoutes);
 
-app.all("*", (req, res, next) => {
-  next(res.status(404).json({ message: "Route not found" }));
+/* --------------------  404 HANDLER  -------------------- */
+
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
 });
 
-module.exports = app;
+/* --------------------  SERVER START  -------------------- */
 
-if (require.main === module) {
-    const PORT = 5000;
-    app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
-    });
-}
+const PORT = process.env.PORT || 5000;
+
+// If you're using a traditional Node server (not serverless), keep this:
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+// If Vercel / another platform needs the app exported:
+module.exports = app;

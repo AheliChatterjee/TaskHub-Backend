@@ -45,7 +45,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 app.use("/api/auth", authRoutes);
 app.use("/api/task", taskRoutes);
-app.use("/api/application", applicationRoutes);
+app.use("/api/applications", applicationRoutes);
 
 app.all("*", (req, res, next) => {
   next(res.status(404).json({ message: "Route not found" }));

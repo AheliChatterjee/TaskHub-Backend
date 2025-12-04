@@ -5,8 +5,10 @@ const jwt = require("jsonwebtoken");
 const client = new OAuth2Client({
   clientId: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  redirectUri: process.env.GOOGLE_REDIRECT_URI,  
+  redirectUri: process.env.GOOGLE_REDIRECT_URI,
 });
+
+const emailRegex = /^[0-9]{7,8}@kiit\.ac\.in$/;
 
 // Step 1: Redirect user to Google Login
 exports.googleRedirect = async (req, res) => {
@@ -32,6 +34,11 @@ exports.googleRedirect = async (req, res) => {
 exports.googleCallback = async (req, res) => {
   try {
     const { code } = req.query;
+    if (!code) {
+      return res
+        .status(400)
+        .json({ message: "Authorization code is required" });
+    }
 
     const r = await client.getToken(code);
     const idToken = r.tokens.id_token;
@@ -44,14 +51,22 @@ exports.googleCallback = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
 
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/oauth-error?reason=invalid_email`
+      );
+    }
+
     // Check if user exists
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: normalizedEmail });
 
     // Create user if new
     if (!user) {
       user = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         password: null,
         role: "both",
         isVerified: true,
@@ -78,6 +93,9 @@ exports.googleCallback = async (req, res) => {
 exports.verifyGoogleToken = async (req, res) => {
   try {
     const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: "idToken is required" });
+    }
 
     const ticket = await client.verifyIdToken({
       idToken,
@@ -87,12 +105,18 @@ exports.verifyGoogleToken = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
 
-    let user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: "Invalid KIIT email format" });
+    }
+
+    let user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       user = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         password: null,
         role: "both",
         isVerified: true,

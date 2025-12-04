@@ -49,10 +49,6 @@ app.use(async (req, res, next) => {
 // Google OAuth Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/auth", googleAuthRoutes);
-
-
-
-app.use("/api/auth", authRoutes);
 app.use("/api/task", taskRoutes);
 app.use("/api/applications", applicationRoutes);
 

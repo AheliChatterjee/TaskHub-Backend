@@ -10,6 +10,7 @@ const googleAuthRoutes = require("./routes/googleAuthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 //setup
 const dbUrl = process.env.MONGODB_URL;
@@ -51,6 +52,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auth", googleAuthRoutes);
 app.use("/api/task", taskRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.all("*", (req, res, next) => {
   next(res.status(404).json({ message: "Route not found" }));

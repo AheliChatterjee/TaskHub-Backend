@@ -40,11 +40,10 @@ async function getMyConversations(req, res) {
       status: "active",
     };
 
-    // If provided, only return conversations that have new activity
+    // Polling support
     if (updatedSince) {
       const sinceDate = new Date(updatedSince);
       if (!isNaN(sinceDate.getTime())) {
-        // Either lastMessageAt or updatedAt is newer than updatedSince
         query.$or = [
           { lastMessageAt: { $gt: sinceDate } },
           { updatedAt: { $gt: sinceDate } },
@@ -55,11 +54,38 @@ async function getMyConversations(req, res) {
     const conversations = await Conversation.find(query)
       .populate("task", "title status")
       .populate("application", "status")
-      .sort({ lastMessageAt: -1, updatedAt: -1 });
+      .populate("participants", "name image") // 👈 only needed fields
+      .sort({ lastMessageAt: -1, updatedAt: -1 })
+      .lean();
+
+    const formattedConversations = conversations.map((conv) => {
+      const otherUser = conv.participants.find(
+        (p) => p._id.toString() !== userId
+      );
+
+      return {
+        _id: conv._id,
+        task: conv.task,
+        application: conv.application,
+        status: conv.status,
+        lastMessageAt: conv.lastMessageAt,
+        createdAt: conv.createdAt,
+        updatedAt: conv.updatedAt,
+
+        // 👇 exactly what you asked for
+        otherUser: otherUser
+          ? {
+              _id: otherUser._id,
+              name: otherUser.name,
+              image: otherUser.image,
+            }
+          : null,
+      };
+    });
 
     res.status(200).json({
       message: "Conversations fetched successfully.",
-      conversations,
+      conversations: formattedConversations,
     });
   } catch (error) {
     console.error("Error fetching conversations:", error);

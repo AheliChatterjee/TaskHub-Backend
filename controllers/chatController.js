@@ -3,6 +3,7 @@ const Message = require("../models/message");
 const Task = require("../models/task");
 const { decryptText, encryptText } = require("../utils/chatEncryption");
 const { deleteFile } = require("../utils/cloudinaryService");
+const User = require("../models/user");
 
 // Helper: check if user is a participant
 async function getAuthorizedConversation(conversationId, userId) {
@@ -111,6 +112,21 @@ async function getConversationMessages(req, res) {
       return res.status(403).json({ message: error });
     }
 
+    /**
+     * STEP 1: Find the OTHER participant (recipient)
+     * conversation.participants contains both users
+     */
+    const recipientId = conversation.participants.find(
+      (p) => p.toString() !== userId
+    );
+
+    /**
+     * STEP 2: Fetch minimal recipient details
+     */
+    const recipient = await User.findById(recipientId)
+      .select("name image")
+      .lean();
+
     const messageQuery = {
       conversation: conversationId,
       deletedFor: { $ne: userId },
@@ -142,7 +158,7 @@ async function getConversationMessages(req, res) {
       .limit(parseInt(limit, 10))
       .lean();
 
-    const transformed = messages
+    const transformedMessages = messages
       .map((m) => ({
         ...m,
         text: m.encryptedText ? decryptText(m.encryptedText) : null,
@@ -152,7 +168,14 @@ async function getConversationMessages(req, res) {
 
     res.status(200).json({
       message: "Messages fetched successfully.",
-      messages: transformed,
+      recipient: recipient
+        ? {
+            _id: recipient._id,
+            name: recipient.name,
+            image: recipient.image,
+          }
+        : null,
+      messages: transformedMessages,
     });
   } catch (error) {
     console.error("Error fetching messages:", error);

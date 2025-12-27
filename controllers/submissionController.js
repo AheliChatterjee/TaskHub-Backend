@@ -1,6 +1,8 @@
 const Submission = require("../models/submission");
 const Task = require("../models/task");
 const { uploadFile, deleteFile } = require("../utils/cloudinaryService");
+const sendTaskSubmissionEmail = require("../utils/emails/sendTaskSubmissionEmail");
+const sendSubmissionDecisionEmail = require("../utils/emails/sendSubmissionDecisionEmail");
 
 async function createSubmission(req, res) {
   try {
@@ -8,7 +10,10 @@ async function createSubmission(req, res) {
     const { taskId } = req.params;
     const { message } = req.body;
 
-    const task = await Task.findById(taskId);
+    const task = await Task.findById(taskId).populate(
+      "uploadedBy",
+      "name email"
+    );
     if (!task) {
       return res.status(404).json({ message: "Task not found." });
     }
@@ -86,6 +91,25 @@ async function createSubmission(req, res) {
     task.status = "submitted";
     await task.save();
 
+    console.log("email details:", {
+      uploaderEmail: task.uploadedBy.email,
+      uploaderName: task.uploadedBy.name,
+    });
+
+    try {
+      Response = await sendTaskSubmissionEmail({
+        uploaderEmail: task.uploadedBy.email,
+        uploaderName: task.uploadedBy.name,
+        freelancerName: req.user.name,
+        taskTitle: task.title,
+        taskId: task._id,
+        version: submission.version,
+      });
+      console.log("Submission email sent:", Response);
+    } catch (error) {
+      console.error("Submission email failed:", error.message);
+    }
+
     res.status(201).json({
       message: `Submission v${nextVersion} created successfully.`,
       submission,
@@ -137,7 +161,9 @@ async function acceptSubmission(req, res) {
     const userId = req.user.id;
     const { id } = req.params;
 
-    const submission = await Submission.findById(id).populate("task");
+    const submission = await Submission.findById(id)
+      .populate("task")
+      .populate("freelancer", "name email");
     if (!submission) {
       return res.status(404).json({ message: "Submission not found." });
     }
@@ -155,6 +181,19 @@ async function acceptSubmission(req, res) {
 
     task.status = "completed";
     await task.save();
+
+    try {
+      Response = await sendSubmissionDecisionEmail({
+        freelancerEmail: submission.freelancer.email,
+        freelancerName: submission.freelancer.name,
+        taskTitle: task.title,
+        taskId: task._id,
+        decision: "accepted",
+      });
+      console.log("Email send response:", Response);
+    } catch (error) {
+      console.error("Submission accepted email failed:", error.message);
+    }
 
     res.status(200).json({
       message: "Submission accepted. Task marked as completed.",
@@ -174,12 +213,15 @@ async function requestRevision(req, res) {
     const { id } = req.params;
     const { message } = req.body;
 
-    const submission = await Submission.findById(id).populate("task");
+    const submission = await Submission.findById(id).populate("task").populate(
+      "freelancer",
+      "name email"
+    );
     if (!submission) {
       return res.status(404).json({ message: "Submission not found." });
     }
 
-    const task = submission.task;    
+    const task = submission.task;
 
     if (task.uploadedBy.toString() !== userId) {
       return res.status(403).json({
@@ -194,7 +236,7 @@ async function requestRevision(req, res) {
           "Maximum revision requests reached. Please accept the submission or raise a dispute.",
       });
     }
-    
+
     // Revision can be requested only when task is in 'submitted' state
     if (task.status !== "submitted") {
       return res.status(400).json({
@@ -221,6 +263,19 @@ async function requestRevision(req, res) {
 
     await submission.save();
     await task.save();
+
+    try {
+      await sendSubmissionDecisionEmail({
+        freelancerEmail: submission.freelancer.email,
+        freelancerName: submission.freelancer.name,
+        taskTitle: task.title,
+        taskId: task._id,
+        decision: "revision_requested",
+        revisionMessage: submission.revisionMessage,
+      });
+    } catch (error) {
+      console.error("Revision request email failed:", error.message);
+    }
 
     res.status(200).json({
       message: "Revision requested successfully.",

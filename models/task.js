@@ -93,7 +93,13 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open", "in progress", "completed", "submitted", "revision_limit_reached"],
+      enum: [
+        "open",
+        "in progress",
+        "completed",
+        "submitted",
+        "revision_limit_reached",
+      ],
       default: "open",
     },
     uploadedBy: {

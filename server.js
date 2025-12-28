@@ -16,48 +16,19 @@ const chatRoutes = require("./routes/chatRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 const paymentRoutes = require('./routes/paymentRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+
+
 const startAutoPayoutJob = require('./jobs/autoPayoutJob');
 
-=======
-const cronRoutes = require("./routes/cronRoutes");
->>>>>>> d257f888a28129766cc416b5985e3b8f03df7446
-=======
->>>>>>> 50fa8d5 (Revert "Deadline reminder service created")
-
-//setup
-const dbUrl = process.env.MONGODB_URL;
 const app = express();
-
-let isConnected = false;
-
-const connectToDB = async () => {
-  if (isConnected) {
-    console.log("Using existing database connection");
-    return;
-
-  }
-  try {
-    await mongoose.connect(dbUrl);
-    isConnected = true;
-    console.log("MongoDB Connected");
-  } catch (err) {
-    console.error("MongoDB Connection Error:", err);
-    isConnected = false;
-  }
-};
-//test
-app.get("/ping", (req, res) => {
-  res.send("pong");
-});
-
 
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 app.use(cors({
   origin: [
     "http://localhost:5173",                    
@@ -66,10 +37,7 @@ app.use(cors({
   ]
 }));
 
-app.use(async (req, res, next) => {
-  await connectToDB();
-  next();
-});
+
 
 
 app.use("/api/auth", authRoutes);
@@ -93,12 +61,32 @@ app.all("*", (req, res, next) => {
 });
 
 
+/* -------------------- SERVER BOOTSTRAP -------------------- */
 
-module.exports = app;
+async function startServer() {
+  try {
+    if (!process.env.MONGODB_URL) {
+      throw new Error("❌ MONGODB_URL missing in environment variables");
+    }
 
-if (require.main === module) {
+    await mongoose.connect(process.env.MONGODB_URL);
+    console.log("✅ MongoDB connected");
+
+    // Start cron ONLY after DB is ready
+    startAutoPayoutJob();
+
     const PORT = 5000;
     app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
+  } catch (err) {
+    console.error("❌ Server startup failed:", err);
+    process.exit(1);
+  }
 }
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

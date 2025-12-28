@@ -1,5 +1,6 @@
 // jobs/autoPayoutJob.js
 const cron = require('node-cron');
+const mongoose = require("mongoose");
 const Task = require('../models/task');
 const { payoutToFreelancer } = require('../services/payoutService');
 
@@ -7,8 +8,14 @@ function startAutoPayoutJob() {
   cron.schedule('0 * * * *', async () => {
     console.log('[autoPayoutJob] tick @', new Date().toISOString());
 
+     if (mongoose.connection.readyState !== 1) {
+      console.log("[autoPayoutJob] DB not connected, skipping tick");
+      return;
+    }
+
     const threshold = new Date(Date.now() - 72 * 60 * 60 * 1000);
 
+    try {
     // Step 1: find candidate task IDs only (cheap query)
     const candidates = await Task.find({
       status: 'submitted',
@@ -56,8 +63,11 @@ function startAutoPayoutJob() {
         await Task.updateOne(
           { _id },
           { $unset: { 'payment.payoutInProgress': '' } }
-        );
+          );
+        }
       }
+    }catch(err){
+      console.error("[autoPayoutJob] job-level failure", err);
     }
   });
 

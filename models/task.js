@@ -75,13 +75,7 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: [
-        "open",
-        "in progress",
-        "completed",
-        "submitted",
-        "revision_limit_reached",
-      ],
+      enum: ["open", "in progress", "completed", "submitted", "revision_limit_reached"],
       default: "open",
     },
     uploadedBy: {
@@ -100,10 +94,6 @@ const taskSchema = new mongoose.Schema(
     maxRevisionRequests: {
       type: Number,
       default: 3,
-    },
-    deadlineReminderSent: {
-      type: Boolean,
-      default: false,
     },
   },
   { timestamps: true }

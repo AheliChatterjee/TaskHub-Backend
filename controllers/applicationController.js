@@ -32,7 +32,7 @@ async function applyForTask(req, res) {
         .json({ message: "Applications are closed for this task." });
     }
 
-    if (task.uploadedBy.toString() === userId) {
+    if (task.uploadedBy._id.toString() === userId) {
       return res
         .status(403)
         .json({ message: "You cannot apply for your own task." });

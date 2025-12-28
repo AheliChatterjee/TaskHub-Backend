@@ -7,7 +7,7 @@ const { fetchPayment } = require('../services/razorpayService');
 // This route must be mounted with raw body preserved (see server.js changes)
 exports.handleRazorpayWebhook = async (req, res) => {
   try {
-    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+    const rawBody = req.body.toString('utf8');
     const signature = req.headers['x-razorpay-signature'];
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 

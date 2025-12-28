@@ -25,6 +25,8 @@ const startAutoPayoutJob = require('./jobs/autoPayoutJob');
 
 const app = express();
 
+// Mount webhook BEFORE express.json()
+app.use('/api/webhooks', webhookRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -35,18 +35,34 @@ const attachmentSchema = new mongoose.Schema(
 
 const paymentSchema = new mongoose.Schema(
   {
-    orderId: String,
-    paymentId: String,
-    amount: Number, // in paise OR rupees? we'll store in INR rupees (number) and paise when interacting with Razorpay
-    platformFeePercent: Number,
-    platformFeeAmount: Number, // in rupees
-    razorpayFee: Number, // in rupees (if available)
-    netPayoutAmount: Number, // in rupees
-    paidAt: Date,
-    payoutId: String,
-    payoutDone: { type: Boolean, default: false },
+    orderId: { type: String },
+    paymentId: { type: String },
+    amount: { type: Number },
+    razorpayFee: { type: Number },
+    platformFeePercent: { type: Number },
+    platformFeeAmount: { type: Number },
+    netPayoutAmount: { type: Number },
+    paidAt: { type: Date },
     chatEnabled: { type: Boolean, default: false },
-    pendingAssignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // set at order creation so webhook can assign
+    pendingAssignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    payoutId: { type: String },
+    payoutDone: { type: Boolean, default: false },
+    payoutInProgress: { type: Boolean, default: false },
+
+    // NEW FIELDS for retry mechanism
+    payoutRetries: {
+      type: Number,
+      default: 0,
+    },
+    payoutLastError: {
+      type: String,
+    },
+    payoutLastAttemptAt: {
+      type: Date,
+    },
   },
   { _id: false }
 );

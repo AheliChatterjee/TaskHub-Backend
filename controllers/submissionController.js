@@ -5,6 +5,7 @@ const sendTaskSubmissionEmail = require("../utils/emails/sendTaskSubmissionEmail
 const sendSubmissionDecisionEmail = require("../utils/emails/sendSubmissionDecisionEmail");
 const Conversation = require("../models/conversation");
 const sendChatClosureThankYouEmail = require("../utils/emails/sendChatClosureThankYouEmail");
+const User = require("../models/user");
 
 async function createSubmission(req, res) {
   try {
@@ -97,12 +98,14 @@ async function createSubmission(req, res) {
       uploaderEmail: task.uploadedBy.email,
       uploaderName: task.uploadedBy.name,
     });
+    
+    const freelancer = await User.findById(userId).select("name");
 
     try {
       Response = await sendTaskSubmissionEmail({
         uploaderEmail: task.uploadedBy.email,
         uploaderName: task.uploadedBy.name,
-        freelancerName: req.user.name,
+        freelancerName: freelancer.name,
         taskTitle: task.title,
         taskId: task._id,
         version: submission.version,

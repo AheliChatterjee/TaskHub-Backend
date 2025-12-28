@@ -3,6 +3,7 @@ const Task = require("../models/task");
 const Conversation = require("../models/conversation");
 const sendTaskApplicationEmail = require("../utils/emails/sendTaskApplicationEmail");
 const sendApplicationAcceptedEmail = require("../utils/emails/sendApplicationAcceptedEmail");
+const User = require("../models/user");
 
 async function applyForTask(req, res) {
   try {
@@ -57,18 +58,23 @@ async function applyForTask(req, res) {
 
     await application.save();
 
+    const freelancer = await User.findById(userId).select("name");
+
     // Send notification email to task uploader
     try {
       console.log("Sending task application email...");
       console.log("Task details:", {
         uploaderEmail: task.uploadedBy.email,
         uploaderName: task.uploadedBy.name,
+        taskTitle: task.title,
+        freelancerName: freelancer.name,
+        taskId: task._id,
       });
       await sendTaskApplicationEmail({
         uploaderEmail: task.uploadedBy.email,
         uploaderName: task.uploadedBy.name,
         taskTitle: task.title,
-        freelancerName: req.user.name,
+        freelancerName: freelancer.name,
         taskId: task._id,
       });
     } catch (error) {

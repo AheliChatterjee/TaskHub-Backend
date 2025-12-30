@@ -1,8 +1,8 @@
-const mongoose = require("mongoose");
-const Task = require("../../models/task");
-const { payoutToFreelancer } = require("../../services/payoutService");
+import mongoose from "mongoose";
+import Task from "../../models/task.js";
+import { payoutToFreelancer } from "../../services/payoutService.js";
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     // Safety: env check
     if (!process.env.MONGODB_URL) {

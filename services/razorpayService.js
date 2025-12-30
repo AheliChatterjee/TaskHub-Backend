@@ -9,10 +9,13 @@ const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
 const accountNumber = process.env.RAZORPAY_ACCOUNT_NUMBER; // RazorpayX account number
 
-if (!keyId || !keySecret || !accountNumber) {
-  throw new Error(
-    "RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_ACCOUNT_NUMBER must be set"
-  );
+/**
+ * Validate Razorpay env lazily (SERVERLESS SAFE)
+ */
+function assertRazorpayEnv() {
+  if (!keyId || !keySecret || !accountNumber) {
+    throw new Error("RAZORPAY_ENV_NOT_CONFIGURED");
+  }
 }
 
 /* -------------------- CLIENTS -------------------- */
@@ -40,6 +43,8 @@ async function createOrder({
   receipt,
   notes = {},
 }) {
+  assertRazorpayEnv();
+
   if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
     throw new Error("INVALID_ORDER_AMOUNT_PAISE");
   }
@@ -55,6 +60,7 @@ async function createOrder({
 }
 
 async function fetchPayment(paymentId) {
+    assertRazorpayEnv();
   const res = await rpAxios.get(`/payments/${paymentId}`);
   return res.data;
 }
@@ -68,6 +74,9 @@ async function createOrGetContact({
   type = "employee",
   reference_id,
 }) {
+    assertRazorpayEnv();
+
+
   const payload = { name, email, contact, type };
   if (reference_id) payload.reference_id = reference_id;
 
@@ -78,6 +87,8 @@ async function createOrGetContact({
 /* -------------------- RAZORPAYX: FUND ACCOUNTS -------------------- */
 
 async function createFundAccountForUPI({ contact_id, upi }) {
+    assertRazorpayEnv();
+
   if (!contact_id || !upi) {
     throw new Error("INVALID_FUND_ACCOUNT_INPUT");
   }
@@ -104,6 +115,9 @@ async function createPayout({
   reference_id,
   idempotencyKey,
 }) {
+
+    assertRazorpayEnv();
+    
   if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
     throw new Error("INVALID_PAYOUT_AMOUNT_PAISE");
   }

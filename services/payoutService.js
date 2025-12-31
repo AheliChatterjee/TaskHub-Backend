@@ -65,26 +65,10 @@ async function payoutToFreelancer({ taskId, triggeredBy = 'manual' }) {
   }
 
   // compute amounts
-   const amountRupees = task.payment?.amount ?? task.budget;
-  if (!amountRupees || amountRupees <= 0) {
-    throw new Error("INVALID_TASK_AMOUNT");
-  }
-
-  const amountPaise = Math.round(amountRupees * 100);
-
-  const platformFeePercent = Number(
-    process.env.PLATFORM_FEE_PERCENT || 10
-  );
-
-  const platformFeePaise = Math.round(
-    (amountPaise * platformFeePercent) / 100
-  );
-
-  const netPayoutPaise = amountPaise - platformFeePaise;
-
-  if (netPayoutPaise <= 0) {
-    throw new Error("INVALID_NET_PAYOUT_AMOUNT");
-  }
+  const platformFeePercent = Number(process.env.PLATFORM_FEE_PERCENT || 10);
+  const amount = task.payment?.amount ?? task.budget; // rupees
+  const platformFeeAmount = +( (amount * platformFeePercent) / 100 ).toFixed(2);
+  const netPayoutAmount = +(amount - platformFeeAmount).toFixed(2);
 
   // ensure contact & fund account
   const freelancer = task.assignedTo;
@@ -98,8 +82,7 @@ async function payoutToFreelancer({ taskId, triggeredBy = 'manual' }) {
     amountRupees: netPayoutAmount,
     fund_account_id,
     narration,
-    reference_id: `task_${task._id}`,
-    idempotencyKey: `payout_task_${task._id}`
+    reference_id: `task_${task._id}`
   });
 
   // update task payment

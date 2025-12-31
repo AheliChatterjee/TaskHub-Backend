@@ -21,7 +21,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 
 
-
+const startAutoPayoutJob = require('./jobs/autoPayoutJob');
 
 const app = express();
 
@@ -31,23 +31,12 @@ app.use('/api/webhooks', webhookRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://task-hub-frontend-three.vercel.app",
-  "https://taskhub.digital",
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
+  origin: [
+    "http://localhost:5173",                    
+    "https://task-hub-frontend-three.vercel.app",
+    "https://taskhub.digital"
+  ]
 }));
 
 
@@ -65,8 +54,9 @@ app.use("/api/submissions", submissionRoutes);
 // Mount payment routes (regular JSON)
 app.use('/api/payments', paymentRoutes);
 // For webhook we mount the webhook route separately so it uses express.raw
-
-
+app.use('/api/webhooks', webhookRoutes);
+// start cron job (node-cron). If deploying to Vercel, replace job with Vercel scheduled function separately.
+startAutoPayoutJob();
 
 app.all("*", (req, res, next) => {
   next(res.status(404).json({ message: "Route not found" }));
@@ -84,6 +74,8 @@ async function startServer() {
     await mongoose.connect(process.env.MONGODB_URL);
     console.log("✅ MongoDB connected");
 
+    // Start cron ONLY after DB is ready
+    startAutoPayoutJob();
 
     const PORT = 5000;
     app.listen(PORT, () => {
@@ -95,8 +87,11 @@ async function startServer() {
   }
 }
 
-if (require.main === module) {
+//temp condition to prevent server from starting during Vercel deployment
+//autopayout problem
+if (process.env.VERCEL !== "1") {
   startServer();
 }
+
 
 module.exports = app;

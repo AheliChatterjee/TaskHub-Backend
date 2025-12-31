@@ -1,7 +1,7 @@
 // services/razorpayService.js
 const Razorpay = require('razorpay');
 const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
+
 
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -74,10 +74,10 @@ async function createPayout({ amountRupees, fund_account_id, narration, referenc
     mode: 'UPI',
     purpose: 'payout',
     narration: narration || 'Task payout',
-    reference_id: reference_id || uuidv4()
+    reference_id: reference_id 
   };
 
-  const idempotencyKey = uuidv4();
+  const idempotencyKey = `payout_task${task_id}`;
   const res = await rpAxios.post('/payouts', payload, {
     headers: {
       'Idempotency-Key': idempotencyKey
